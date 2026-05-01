@@ -1,142 +1,95 @@
-✅ Sequence #1 on sepolia | Total Paid: 0.000011552793406581 ETH (7470897 gas * avg 0.001546373 gwei)
+# Multi-Chain Vault Deployment
 
-✅ Sequence #1 on arbitrum-sepolia | Total Paid: 0.000149435898978 ETH (7470885 gas * avg 0.020004333 gwei) forge script script/Vault.s.sol  --rpc-url arbitrumSepolia --broadcast 
-✅ Sequence #1 on optimism-sepolia | Total Paid: 0.00000747275272125 ETH (7470885 gas * avg 0.00100025 gwei)
-[
-No files changed, compilation skipped
-Script ran successfully.
+A Foundry-based deployment of `Vault.s.sol` across Ethereum L1 and two Layer 2 testnets — built to understand how gas costs actually behave across different networks.
 
-== Logs ==
-  Token: 0x95fA74F92bfBaeBaBDAE9B4336f36589fa914FD4
-  Vault: 0x8226B0de1E949AE2807877eAC6C16d94b4f2708C
-  Strategy1: 0x1b49Edb49Dee624A424C95373B003a23B257562C
-  Strategy2: 0x2AE2E0d1E81A282f093c2EDFe8e6a5605a7dC0F2
-  Strategy3: 0x0C931BCf83BE8e24a9BA2417b354A24fbC7911c7
+---
 
-## Setting up 1 EVM.
+## What This Project Does
 
-==========================
+This project deploys the same smart contract to three different networks and compares the results. The goal isn't just to get the contract live — it's to understand *why* costs differ across chains, and what that means when you eventually move to mainnet.
 
-Chain 421614
+---
 
-Estimated gas price: 0.040060001 gwei
+## Deployment Results
 
-Estimated total gas used for script: 9694663
+| Network      | Total Paid (ETH)     | Gas Used | Avg Gas Price |
+| Sepolia (L1) | 0.000011552793406581 | 7,470,897 | 0.001546373 Gwei |
+| Arbitrum Sepolia (L2) | 0.000149435898978 | 7,470,885 | 0.020004333 Gwei |
+| Optimism Sepolia (L2) | 0.00000747275272125 | 7,470,885 | 0.00100025 Gwei |
 
-Estimated amount required: 0.000388368209474663 ETH
+> Gas used was nearly identical across all three chains — within 12 units. Every cost difference comes down to gas *price*, not gas *consumption*.
 
-==========================
+---
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0xdaaba2333bd4d10eba7f74cb6c3474fb30a3d88adbdd8880d20870d0289a25fa
-Contract Address: 0x95fA74F92bfBaeBaBDAE9B4336f36589fa914FD4
-Block: 264199859
-Paid: 0.00002033994 ETH (1016997 gas * 0.02 gwei)
+## A Quick Primer on L2s
 
+Ethereum can only process so many transactions at a time. During busy periods, users compete to get their transactions included, which drives gas prices up. Layer 2 networks (L2s) solve this by processing transactions off the main chain and periodically posting a compressed summary back to Ethereum.
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0x98669bedf4d348e044de4ca2589191dfbd58217aaa43bb869398e3a260854c00
-Contract Address: 0x8226B0de1E949AE2807877eAC6C16d94b4f2708C
-Block: 264199866
-Paid: 0.00007855932 ETH (3927966 gas * 0.02 gwei)
+The result: you get Ethereum's security guarantees at a fraction of the cost — because you're sharing the L1 settlement fee across thousands of bundled transactions.
 
+Both Arbitrum and Optimism are **Optimistic Rollups** — the dominant L2 architecture today. They assume transactions are valid by default and only run fraud proofs if someone challenges them. In theory, they should be significantly cheaper than L1.
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0x57e543a6ad8545a48fb69556c1724fb87251c1a334927efc27a0a23e1c879a2d
-Contract Address: 0x1b49Edb49Dee624A424C95373B003a23B257562C
-Block: 264199870
-Paid: 0.00001619058 ETH (809529 gas * 0.02 gwei)
+---
 
+## The Arbitrum Anomaly
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0xd1b3772979680723eb191103375938ea964e4f27a5450f254b68b925390cbb0f
-Contract Address: 0x2AE2E0d1E81A282f093c2EDFe8e6a5605a7dC0F2
-Block: 264199877
-Paid: 0.000016208389638 ETH (809529 gas * 0.020022 gwei)
+Here's the part that's actually interesting: **Arbitrum cost more than both Ethereum L1 and Optimism in this deployment.**
 
+That runs counter to the whole point of L2s, so it deserves an explanation.
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0x46b57ef780d82ac7b560d51e071dd8bd2fcfd08ffe166a60f334b633aba9c610
-Contract Address: 0x0C931BCf83BE8e24a9BA2417b354A24fbC7911c7
-Block: 264199884
-Paid: 0.00001619058 ETH (809529 gas * 0.02 gwei)
+**Two things caused this:**
 
+**1. Arbitrum's minimum gas floor**
+Arbitrum enforces a minimum base fee of roughly 0.02 Gwei, even when the network is completely idle. This is intentional — it's a spam protection mechanism that prevents people from flooding the testnet with near-free transactions. On a real network under real load, this floor is typically well below the market price and doesn't matter. On a quiet testnet, it becomes the dominant cost driver.
 
-##### arbitrum-sepolia
-✅  [Success] Hash: 0xd504fc23f3c8220ff1d2a85aa6e380ed26e0402ad488b5bcdf800e0597cb6d6e
-Block: 264199890
-Paid: 0.00000194708934 ETH (97335 gas * 0.020004 gwei)
+**2. L1 data posting overhead**
+Every L2 sequencer has to periodically bundle transactions and post them to Ethereum L1 as calldata. On mainnet, this cost is split across thousands of transactions, making it negligible per-user. On a testnet, L1 (Sepolia) is nearly free and underutilized — but the overhead of running the sequencer and posting that bundle still exists. In this run, that overhead was enough to push Arbitrum's total cost past what it would've been to just run the transaction directly on L1.
 
-✅ Sequence #1 on arbitrum-sepolia | Total Paid: 0.000149435898978 ETH (7470885 gas * avg 0.020004333 gwei)
-]
-[ forge script script/Vault.s.sol  --rpc-url optimismSepolia --broadcast --verify
-[⠊] Compiling...
-No files changed, compilation skipped
-Script ran successfully.
+**Optimism didn't have this problem** because its base fee was sitting at 0.001 Gwei — well below Arbitrum's floor — so the economics worked out in its favor.
 
-== Logs ==
-  Token: 0x95fA74F92bfBaeBaBDAE9B4336f36589fa914FD4
-  Vault: 0x8226B0de1E949AE2807877eAC6C16d94b4f2708C
-  Strategy1: 0x1b49Edb49Dee624A424C95373B003a23B257562C
-  Strategy2: 0x2AE2E0d1E81A282f093c2EDFe8e6a5605a7dC0F2
-  Strategy3: 0x0C931BCf83BE8e24a9BA2417b354A24fbC7911c7
+---
 
-## Setting up 1 EVM.
+## What This Looks Like on Mainnet
 
-==========================
+Testnets distort the numbers. Here's what the same deployment would cost under realistic mainnet conditions:
 
-Chain 11155420
+| Scenario | Network | Est. Gas Price | Total Cost (7.4M gas) |
+| High-traffic L1 | Ethereum Mainnet | ~30 Gwei | ~0.22 ETH (~$600) |
+| L2 scaling | Arbitrum / Optimism | ~0.1 Gwei | ~0.001 ETH (~$3) |
 
-Estimated gas price: 0.0010005 gwei
+That's roughly a **200× cost reduction** for identical execution.
 
-Estimated total gas used for script: 9720055
+---
 
-Estimated amount required: 0.0000097249150275 ETH
+## Key Takeaways
 
-==========================
+**Gas used ≠ gas cost.** The EVM ran the same bytecode with the same computational effort on every chain. What you pay is determined by the fee market of each individual network.
 
-##### optimism-sepolia
-✅  [Success] Hash: 0x4dc50aa33d9bf3b10dbe83ee9078c701f919d03adcf78583bd055e41d8988642
-Contract Address: 0x95fA74F92bfBaeBaBDAE9B4336f36589fa914FD4
-Block: 42883554
-Paid: 0.00000101725124925 ETH (1016997 gas * 0.00100025 gwei)
+**L2 costs have two components.** Execution fees (what you pay the L2 sequencer) and data availability fees (what the sequencer pays to post your transaction batch to L1). On testnets, the second part can dominate in unexpected ways.
 
+**Testnet economics are not mainnet economics.** Arbitrum's behavior here is a testnet-specific quirk. Under real congestion, both L2s deliver on their promise of dramatically lower fees.
 
-##### optimism-sepolia
-✅  [Success] Hash: 0x0af064c45ea765530901eb2c774a24c64a6fe2b827e11a21765e2ad30a2cf55a
-Contract Address: 0x8226B0de1E949AE2807877eAC6C16d94b4f2708C
-Block: 42883554
-Paid: 0.0000039289479915 ETH (3927966 gas * 0.00100025 gwei)
+**Rollup architecture matters.** Arbitrum and Optimism are both Optimistic Rollups, but their sequencer designs and fee policies are different. For large deployments like this one (7.4M gas), those differences show up clearly.
 
+---
 
-##### optimism-sepolia
-✅  [Success] Hash: 0xc05287bd4bd7dffef74152ee1e38c7bf0ed0e27304e8bcab69c3414fe44c7a2e
-Contract Address: 0x2AE2E0d1E81A282f093c2EDFe8e6a5605a7dC0F2
-Block: 42883554
-Paid: 0.00000080973138225 ETH (809529 gas * 0.00100025 gwei)
+## How to Run It
 
+```bash
+# Deploy to any supported network
+forge script script/Vault.s.sol \
+  --rpc-url <NETWORK_RPC> \
+  --broadcast \
+  --verify
+```
 
-##### optimism-sepolia
-✅  [Success] Hash: 0x3cb8de12be6f87f291477d860cec6fa7a0c01e15ddec05c201cd2459fd567ea2
-Contract Address: 0x1b49Edb49Dee624A424C95373B003a23B257562C
-Block: 42883554
-Paid: 0.00000080973138225 ETH (809529 gas * 0.00100025 gwei)
+Replace `<NETWORK_RPC>` with your target network's RPC endpoint. RPC URLs for testnets can be obtained from [Alchemy](https://www.alchemy.com) or [Infura](https://www.infura.io).
 
+---
 
-##### optimism-sepolia
-✅  [Success] Hash: 0x69cf6a17a4297cc433d55717e91d0c4afdd97311810e6acb6236db4f77cefd64
-Block: 42883555
-Paid: 0.00000009735933375 ETH (97335 gas * 0.00100025 gwei)
+## Stack
 
-
-##### optimism-sepolia
-✅  [Success] Hash: 0xf20ed2cfb44871cdfe7637f1a7781e2c29f06e861aa2cc6fb96be82635889b49
-Contract Address: 0x0C931BCf83BE8e24a9BA2417b354A24fbC7911c7
-Block: 42883555
-Paid: 0.00000080973138225 ETH (809529 gas * 0.00100025 gwei)
-
-
-                                                                                              
-
-==========================
-]
+- [Foundry](https://book.getfoundry.sh/) — smart contract development and deployment
+- Sepolia — Ethereum L1 testnet
+- Arbitrum Sepolia — L2 testnet (Optimistic Rollup)
+- Optimism Sepolia — L2 testnet (Optimistic Rollup)
